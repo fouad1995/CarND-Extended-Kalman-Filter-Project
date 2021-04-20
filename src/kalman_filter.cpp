@@ -1,5 +1,5 @@
 #include "kalman_filter.h"
-
+#include "tools.h" // to calculate jacobian
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -43,11 +43,9 @@ void KalmanFilter::Update(const VectorXd &z) {
    */
     
 
-    // map the state vector to measurment vector 
-    VectorXd z_predicted = H_ * x_; 
-
-    // calculate erro in prediction  (actual sensor reading - predicted value from predicted state )
-    VectorXd y = z - z_predicted; 
+    // calculate erro in prediction  (actual sensor reading - predicted value from predicted state (using JACOBIAN )
+    // H_ will be passed from outside in initialization so don't worry this will be correct value here H_(3*4)
+    VectorXd y = z - H_;
 
     // calculate S matrix
     // adding R_ which has information about Measurment noise
@@ -75,4 +73,61 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   /**
    * TODO: update the state by using Extended Kalman Filter equations
    */
+
+    // compute Jacobian each time (to linearize the mapping function)
+
+
+    // map the state vector to measurment vector ( convert from polar coordinate to cartesian coordinate )
+
+    auto px = x_(0);    // position in x direction
+    auto py = x_(1);    // position in y direction
+    auto vx = x_(2);    // velocity in x direction 
+    auto vy = x_(3);    // velocity in y direction 
+
+    if (px == 0 && py == 0) {
+        std::cout << "UpdateEKF-Error position values is zero \n";
+        return;
+    }
+
+    auto magnitude = sqrt((px * px) + (py * py));
+
+    auto rho = magnitude;                                   // sqrt(px^2+py^2)
+    auto phi = atan2(py,px);                                // arctan(py/px)
+    auto rho_dot = (px * vx + py * vy) / magnitude;
+    
+    VectorXd h_x;   // holds the mapped data from polar to cartesian coordinates
+
+    h_x << rho,
+           phi,
+           rho_dot;
+   
+
+    // calculate erro in prediction  (actual sensor reading (mapped from polar to cartesian coordinates) - predicted value from predicted state )
+    VectorXd y = z - h_x;
+
+
+    // calculate Jacobian matrix to linearize the non-linear h_x function
+    Tools tools;
+    H_ = tools.CalculateJacobian(x_);
+
+    // calculate S matrix
+    // adding R_ which has information about Measurment noise
+    MatrixXd S = H_ * P_ * H_.transpose() + R_;
+
+    MatrixXd Si = S.inverse();
+    MatrixXd PHt = P_ * Ht;
+
+    // calculate kalman gain
+    // Kalman Gain should have information about P and R to decide which will be trusted most (measurment or prediction)
+    MatrixXd K = PHt * Si;
+
+
+    // update new state
+    // KG will give a very heigh weight to measurment if Q is low , P is high and vice verse
+    x_ = x_ + (K * y);
+
+    // update the Covariance matrix 
+    long x_size = x_.size();
+    MatrixXd I = MatrixXd::Identity(x_size, x_size);
+    P_ = (I - K * H_) * P_;
 }
