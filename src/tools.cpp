@@ -48,3 +48,10 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
     return Hj;
 
 }
+
+
+double Tools::normalize(double value, double min, double max) {
+
+    return (value - min) / (max - min);
+
+}

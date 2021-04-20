@@ -92,7 +92,7 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     auto magnitude = sqrt((px * px) + (py * py));
 
     auto rho = magnitude;                                   // sqrt(px^2+py^2)
-    auto phi = atan2(py,px);                                // arctan(py/px)
+    auto phi = atan2(py,px);                                // arctan(py/px) => radians 
     auto rho_dot = (px * vx + py * vy) / magnitude;
     
     VectorXd h_x;   // holds the mapped data from polar to cartesian coordinates
@@ -105,9 +105,12 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     // calculate erro in prediction  (actual sensor reading (mapped from polar to cartesian coordinates) - predicted value from predicted state )
     VectorXd y = z - h_x;
 
+    // normalize phi in output to be between -pi to pi
+    Tools tools;
+    y(1) = tools.normalize(y(1), -M_PI, M_PI);
 
     // calculate Jacobian matrix to linearize the non-linear h_x function
-    Tools tools;
+    
     H_ = tools.CalculateJacobian(x_);
 
     // calculate S matrix
