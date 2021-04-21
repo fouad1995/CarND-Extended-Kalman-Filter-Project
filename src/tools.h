@@ -5,6 +5,8 @@
 #include "Eigen/Dense"
 
 class Tools {
+  
+  
  public:
   /**
    * Constructor.
@@ -27,10 +29,12 @@ class Tools {
    */
   Eigen::MatrixXd CalculateJacobian(const Eigen::VectorXd& x_state);
 
-  /**
+    /**
    * A helper method to normalize radians.
    */
   double normalize(double value, double min, double max);
+  private:
+  Eigen::MatrixXd Hj;
 };
 
 #endif  // TOOLS_H_

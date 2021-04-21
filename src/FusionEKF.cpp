@@ -37,19 +37,12 @@ FusionEKF::FusionEKF() {
    * TODO: Finish initializing the FusionEKF.
    * TODO: Set the process and measurement noises
    */
-   // state covariance matrix P
-  ekf_.P_ = MatrixXd(4, 4);
-  ekf_.P_ << 1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1000, 0,
-      0, 0, 0, 1000;
 
   // measurement matrix
-  H_ = MatrixXd(2, 4);
-  H_ << 1, 0, 0, 0,
-             0, 1, 0, 0;
+  H_laser_ << 1, 0, 0, 0,
+              0, 1, 0, 0;
 
-  Hj_ = tools.CalculateJacobian(ekf_.x);
+
 
   // the initial transition matrix F_
   ekf_.F_ = MatrixXd(4, 4);
@@ -58,6 +51,12 @@ FusionEKF::FusionEKF() {
             0, 0, 1, 0,
             0, 0, 0, 1;
 
+   // process noise 
+  ekf_.P_ = MatrixXd(4, 4);
+  ekf_.P_ << 1, 0, 0, 0,
+             0, 1, 0, 0,
+             0, 0, 1000, 0,
+             0, 0, 0, 1000;  
 }
 
 /**
@@ -66,6 +65,8 @@ FusionEKF::FusionEKF() {
 FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
+   
+  std::cout<<"ProcessMeasurement started\n";
   /**
    * Initialization
    */
@@ -102,6 +103,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
         
         ekf_.R_ = R_radar_;
 
+        // ekf_.H_ will hold the dimentionality of Hj and then Hj is calculated in Update-EKF
+        Hj_ = tools.CalculateJacobian(ekf_.x_);
         ekf_.H_ = Hj_;
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
@@ -114,12 +117,13 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
         ekf_.R_ = R_laser_;
 
+        // ekf_.H_ will hold the dimentionality of H_laser_ which already initialized in the constructor 
         ekf_.H_ = H_laser_;
     }
 
-
-
     // done initializing, no need to predict or update
+    // initial timestamp 
+      previous_timestamp_ = measurement_pack.timestamp_;
     is_initialized_ = true;
     return;
   }
@@ -135,7 +139,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
    * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
 
-  auto previous_timestamp_ = measurement_pack.timestamp_;
+
 
   float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;
   previous_timestamp_ = measurement_pack.timestamp_;
@@ -169,14 +173,26 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // TODO: Radar updates
+   	  ekf_.R_ = R_radar_;
+
+        // ekf_.H_ will hold the dimentionality of Hj and then Hj is calculated in Update-EKF
+      Hj_ = tools.CalculateJacobian(ekf_.x_);
+      ekf_.H_ = Hj_;
       ekf_.UpdateEKF(measurement_pack.raw_measurements_);
 
   } else {
     // TODO: Laser updates
+
+      ekf_.R_ = R_laser_;
+
+        // ekf_.H_ will hold the dimentionality of H_laser_ which already initialized in the constructor 
+      ekf_.H_ = H_laser_;
       ekf_.Update(measurement_pack.raw_measurements_);
   }
 
   // print the output
   cout << "x_ = " << ekf_.x_ << endl;
   cout << "P_ = " << ekf_.P_ << endl;
+  
+  std::cout<<"ProcessMeasurement finished\n";
 }
