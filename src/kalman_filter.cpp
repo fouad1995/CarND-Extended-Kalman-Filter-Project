@@ -1,6 +1,7 @@
 #include "kalman_filter.h"
 #include "tools.h" // to calculate jacobian
 #include <iostream>
+#include <algorithm>    // std::max
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -64,19 +65,15 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
     float vx = x_(2);    // velocity in x direction 
     float vy = x_(3);    // velocity in y direction 
 
-    // check devision  by zero 
-
-    if (fabs(px) < 0.0001 &&fabs(py) ){
-      	//generate two small random values for px and py instead putting them with 0
-      	px = ((float) rand() / (RAND_MAX)) + 1;
-      	py = ((float) rand() / (RAND_MAX)) + 1;
-    }
+    
     float magnitude = sqrt((px * px) + (py * py));
 
     float rho = magnitude;                                   // sqrt(px^2+py^2)
     float phi = atan2(py,px);                                // arctan(py/px) => radians 
   
-    float rho_dot = (px * vx + py * vy) / rho;
+    // check devision  by zero 
+    // leave the equation to take the decision on what to do with zaro
+    float rho_dot = (px * vx + py * vy) / std::max(rho,(float)0.0001);
 
     VectorXd h_x = VectorXd(3);   // holds the mapped data from polar to cartesian coordinates
 	
